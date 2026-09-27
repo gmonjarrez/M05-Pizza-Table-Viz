@@ -58,7 +58,8 @@ price_leader <- sales$category[which.max(sales$mean_price)]
 
 ```{=html}
 <style>
-.gt_table svg > rect { fill: white; }
+.gt_table svg rect { fill: white !important; }
+.gt_table svg polyline { fill: none; }
 </style>
 ```
 
