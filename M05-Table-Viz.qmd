@@ -1,0 +1,166 @@
+---
+title: "M05-Visualizing Data with Tables for MSDM CEP"
+author: "Georgia Monjarrez"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-expand: 2
+    number-sections: true
+    code-link: true
+    embed-resources: true
+    code-fold: true
+    code-tools: true
+    code-overflow: wrap
+editor: visual
+execute:
+  freeze: auto
+  warning: false
+  message: false
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+library(dplyr)
+library(tidyr)
+library(gt)
+library(gtExtras)
+pizza <- gt::pizzaplace |>
+  mutate(date = as.Date(date), month = as.integer(format(date, "%m")),
+         category = tools::toTitleCase(type))
+stopifnot(!anyNA(pizza[c("price", "category", "date")]), all(pizza$price >= 0))
+monthly <- pizza |>
+  count(category, month, name = "units") |>
+  complete(category, month = 1:12, fill = list(units = 0)) |>
+  arrange(category, month) |>
+  group_by(category) |>
+  summarise(monthly_units = list(units), .groups = "drop")
+sales <- pizza |>
+  group_by(category) |>
+  summarise(units = n(), revenue = sum(price),
+            mean_price = mean(price), median_price = median(price),
+            .groups = "drop") |>
+  mutate(revenue_share = revenue / sum(revenue)) |>
+  left_join(monthly, by = "category") |>
+  arrange(desc(revenue))
+stopifnot(sum(sales$units) == nrow(pizza),
+          isTRUE(all.equal(sum(sales$revenue), sum(pizza$price))),
+          all(lengths(sales$monthly_units) == 12))
+money <- function(x) paste0("$", formatC(x, format = "f", digits = 2, big.mark = ","))
+count_fmt <- function(x) formatC(x, format = "d", big.mark = ",")
+volume_leader <- sales$category[which.max(sales$units)]
+price_leader <- sales$category[which.max(sales$mean_price)]
+```
+
+# Reflection
+
+## Learning from the videos
+
+> Summarize what you learned from the videos you watched.
+
+A useful table starts with a clear analytical question and an appropriate summary of the data. For this assignment, I grouped pizza sales by category before formatting the results. This separates the calculation of statistics from the presentation of those statistics. In `gt`, titles, column labels, spanners, and notes help readers understand a table's structure. Consistent currency formatting makes the numbers easier to compare. Small charts can then reveal patterns that would be difficult to notice in a long list of values. My main takeaway from this exercise is that table design should make a comparison easier, while still keeping the exact values available.
+
+## Useful features of the packages
+
+> What did you like about the gt and gtExtra packages demonstrated in the videos?
+
+I like the way `gt` lets me improve a table one step at a time. I can begin with a summary and then add readable labels, grouped headings, number formatting, and explanatory notes. This makes it easier to connect design choices to the reader's needs. I also like how `gtExtras` adds small visual summaries inside the table. In this report, each category has a sparkline showing monthly pizza sales. The combination is useful because the reader can examine both an annual total and changes during the year without moving between separate displays. The package used here is named `gtExtras`.
+
+## Tables and charts together
+
+> How do tables complement charts for data visualization?
+
+Charts help readers recognize trends, differences, and unusual observations quickly. Tables provide precise values and allow readers to look up a particular category or measure. For example, a chart can show which pizza category sells the most, while a table can show its exact sales volume, revenue, and average selling price. Combining a table with small charts offers both kinds of information. The numbers support precise comparisons, and the visual elements help readers notice patterns worth investigating.
+
+## When a table is preferable
+
+> Under what circumstances would you prefer to use tables rather than charts to visualize data?
+
+I would choose a table when the audience needs exact values, when several measures with different units must appear together, or when readers need to look up specific categories. A table is especially useful for a small number of groups, such as the four pizza categories in this analysis. It can present sales counts, dollar amounts, and percentages without requiring several separate charts. I would still use a larger chart when the primary goal is to show a complex trend or a relationship across many observations.
+
+# Pizza sales analysis
+
+## Analytics objective and data
+
+**Objective:** Compare sales volume and revenue across pizza categories and examine monthly demand to identify areas for further menu and inventory analysis.
+
+The analysis uses the synthetic `gt::pizzaplace` dataset: `r count_fmt(nrow(pizza))` individual pizza records from `r format(min(pizza$date), "%B %d, %Y")` through `r format(max(pizza$date), "%B %d, %Y")`. Each row represents a pizza, and an order can contain multiple pizzas. The dataset is an educational example rather than evidence about a real restaurant. [Dataset documentation](https://gt.rstudio.com/reference/pizzaplace.html)
+
+::: {.panel-tabset}
+## Variables
+
+- **Category (`type`):** groups the pizzas into Classic, Supreme, Chicken, and Veggie.
+- **Price (`price`):** the selling price in U.S. dollars.
+- **Date (`date`):** used to calculate monthly sales volume.
+
+## Measures
+
+- **Pizzas sold:** the number of pizza records in each category.
+- **Revenue:** the sum of pizza prices.
+- **Revenue share:** category revenue divided by total revenue.
+- **Mean and median price:** descriptive summaries of sold pizza prices.
+- **Monthly sales:** counts for January through December in chronological order.
+
+## Interpretation limits
+
+Revenue does not measure profit because ingredient and operating costs are unavailable. Category price differences also reflect the mix of sizes and pizza varieties sold. A single year of data cannot establish a recurring seasonal pattern.[^season]
+:::
+
+[^season]: Monthly totals also reflect differences in month length; they are not adjusted to sales per day.
+
+## Category comparison
+
+@tbl-pizza combines precise statistics with monthly patterns. Rows are sorted by revenue, and darker shading indicates a larger revenue share. All sparklines use the same vertical scale.
+
+```{r}
+#| label: tbl-pizza
+#| tbl-cap: "Pizza sales by category: annual performance and monthly volume."
+# Summarize first, then format the table for readers.
+sales |>
+  gt(rowname_col = "category") |>
+  tab_header(title = "A year of pizza sales",
+             subtitle = "Category performance | January–December 2015") |>
+  tab_stubhead(label = "Pizza category") |>
+  tab_spanner(label = "Annual sales", columns = c(units, revenue, revenue_share)) |>
+  tab_spanner(label = "Price per pizza", columns = c(mean_price, median_price)) |>
+  cols_label(units = "Pizzas sold", revenue = "Revenue",
+             revenue_share = "Revenue share", mean_price = "Mean",
+             median_price = "Median", monthly_units = "Monthly sales") |>
+  fmt_number(columns = units, decimals = 2, use_seps = TRUE) |>
+  fmt_currency(columns = c(revenue, mean_price, median_price),
+               currency = "USD", decimals = 2) |>
+  fmt_percent(columns = revenue_share, decimals = 2) |>
+  data_color(columns = revenue_share, palette = c("#edf6f5", "#237b78")) |>
+  gtExtras::gt_plt_sparkline(column = monthly_units, same_limit = TRUE,
+                            label = FALSE,
+                            palette = c("#237b78", "#237b78", "#237b78",
+                                        "#237b78", "#e8f2f1")) |>
+  opt_row_striping() |>
+  tab_options(table.font.size = px(14), data_row.padding = px(10))
+```
+
+## Findings and implications
+
+The dataset contains **`r count_fmt(nrow(pizza))` pizzas** and **`r money(sum(pizza$price))` in revenue**. **`r sales$category[1]`** generates the most revenue at **`r money(sales$revenue[1])`**, representing **`r sprintf("%.2f%%", sales$revenue_share[1] * 100)`** of total sales revenue. **`r volume_leader`** has the largest sales volume, while **`r price_leader`** has the highest mean selling price.
+
+These measures answer different questions: volume describes demand in units, while revenue reflects both the number of pizzas sold and their selling prices. The monthly sparklines provide context for the annual totals and suggest periods to examine more closely. Before changing inventory or promotions, I would compare specific pizza varieties and sizes and add cost information.
+
+
+# Value for the MSDM report or presentation
+
+> Explain why the table is worth adding to your MSDM project written report or presentation slides.
+
+This table is worth including because it connects the analytical objective to a compact, readable comparison. A reader can identify the leading category, compare typical selling prices, and inspect monthly demand in one place. The spanner headings separate sales performance from price statistics, and the currency symbols and percentage labels clarify the units. The accompanying discussion makes the calculations and limitations transparent.
+
+In a written report, the table supports detailed comparisons and provides exact numbers for discussion. In a presentation, it can accompany a focused message about category performance, provided the text remains readable at slide size. The analysis also demonstrates a reproducible process: the summary and table can be regenerated from the original data rather than manually retyping the results.
+
+# Appendix
+
+## Repository and published report
+
+- GitHub repository: [M05-Pizza-Table-Viz](https://github.com/gmonjarrez/M05-Pizza-Table-Viz)
+- Published HTML report: [Pizza sales report](https://gmonjarrez.github.io/M05-Pizza-Table-Viz/)
