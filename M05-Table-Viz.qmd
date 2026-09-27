@@ -107,10 +107,9 @@ The analysis uses the synthetic `gt::pizzaplace` dataset: `r count_fmt(nrow(pizz
 
 ## Interpretation limits
 
-Revenue does not measure profit because ingredient and operating costs are unavailable. Category price differences also reflect the mix of sizes and pizza varieties sold. A single year of data cannot establish a recurring seasonal pattern.[^season]
+Revenue does not measure profit because ingredient and operating costs are unavailable. Category price differences also reflect the mix of sizes and pizza varieties sold. A single year of data cannot establish a recurring seasonal pattern.
 :::
 
-[^season]: Monthly totals also reflect differences in month length; they are not adjusted to sales per day.
 
 ## Category comparison
 
