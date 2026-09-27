@@ -56,6 +56,12 @@ volume_leader <- sales$category[which.max(sales$units)]
 price_leader <- sales$category[which.max(sales$mean_price)]
 ```
 
+```{=html}
+<style>
+.gt_table svg > rect { fill: white; }
+</style>
+```
+
 # Reflection
 
 ## Learning from the videos
@@ -122,7 +128,7 @@ Revenue does not measure profit because ingredient and operating costs are unava
 sales |>
   gt(rowname_col = "category") |>
   tab_header(title = "A year of pizza sales",
-             subtitle = "Category performance | January–December 2015") |>
+             subtitle = "Category performance | January to December 2015") |>
   tab_stubhead(label = "Pizza category") |>
   tab_spanner(label = "Annual sales", columns = c(units, revenue, revenue_share)) |>
   tab_spanner(label = "Price per pizza", columns = c(mean_price, median_price)) |>
